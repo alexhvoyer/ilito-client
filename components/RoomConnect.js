@@ -12,7 +12,7 @@ import {
 import { inject, observer } from 'mobx-react'
 
 class RoomCreation extends React.Component {
-  
+
   static navigationOptions = {
     title: 'Room connect',
   }

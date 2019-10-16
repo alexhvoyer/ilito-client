@@ -14,7 +14,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons'
 import { inject, observer } from 'mobx-react'
 
 class RoomCreation extends React.Component {
-  
+
   static navigationOptions = {
     tabBarIcon: <Icon name="plus" size={22} />
   }
@@ -24,14 +24,16 @@ class RoomCreation extends React.Component {
   }
 
   handleRoomCreate = () => {
-      const { roomName } = this.state
+      const { roomName } = this.state;
+      const { roomStore, authStore } = this.props;
+      const {user} = authStore.authData;
       if (!roomName) {
         return Alert.alert(
             null,
             'Please, fill the room name to continue'
         )
       }
-      this.props.roomStore.createRoom(roomName)
+      roomStore.createRoom(roomName, user.id);
   }
 
   shareLink = async (roomLink) => {
@@ -105,4 +107,4 @@ const styles = StyleSheet.create({
   }
 });
 
-export default inject('roomStore')(observer(RoomCreation))
+export default inject('roomStore', 'authStore')(observer(RoomCreation))

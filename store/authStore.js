@@ -1,27 +1,69 @@
 import {observable, flow, action} from 'mobx';
-import { request } from 'graphql-request'
 import _ from 'lodash'
 import { Alert } from 'react-native'
+import api from '../api'
+import AsyncStorage from '@react-native-community/async-storage';
 
 class AuthStore {
   @observable isFetching = false;
   @observable error = null;
   @observable authData = {
-    accessToken: 'scsvrheg',
-    user: {
-      id: '87a23864-5216-4463-b9d9-40bd4ccbce72',
-      userName: null,
-      email: 'alex@test.ru',
-      avatar: null,
-    }
+    accessToken: null,
+    user: {}
   };
 
   @action
   logout = () => {
-    this.authData = null;
+    AsyncStorage.setItem('userId', '').then(() => {
+      this.authData = {
+        accessToken: null,
+        user: {},
+        isLoggedOut: true
+      };
+    });
   }
 
+  updateUser = flow(function*(userData) {
+    const query = `
+    mutation($userData: UserUpdate!){
+      updateUser(userData: $userData){
+        id,
+        email,
+        avatar,
+        description,
+        userName
+      }
+    }
+    `;
+    const variables = {
+      userData,
+    }
+    try {
+      this.isFetching = true;
+      const { updateUser } = yield api(query, variables);
+      this.authData = {
+        ...this.authData,
+        user: updateUser
+      };
+    } catch (error) {
+      this.error = _.get(error, 'response.errors[0].message', 'Update user error');
+      Alert.alert(
+        null,
+        this.error
+    )
+    } finally {
+      this.isFetching = false;
+    }
+  })
+
   signIn = flow(function*(signInData) {
+    const saveLogged = async (userId) => {
+      try {
+        await AsyncStorage.setItem('userId', userId)
+      } catch(e) {
+        console.warn('e', e)
+      }
+    }
     const query = `
       query Auth($email: String!, $password: String!){
         validateUser(email: $email, password: $password) {
@@ -41,8 +83,9 @@ class AuthStore {
     }
     try {
       this.isFetching = true;
-      signInData = yield request('http://10.0.2.2:3000/graphql', query, variables);
+      signInData = yield api(query, variables);
       this.authData = signInData.validateUser;
+      saveLogged(this.authData.user.id);
     } catch (error) {
       this.error = _.get(error, 'response.errors[0].message', 'Auth error');
       Alert.alert(
@@ -54,17 +97,6 @@ class AuthStore {
     }
   });
 
-  getRoom = flow(function*(roomLink) {
-    try {
-      this.isFetching = true;
-      this.roomData = getMockRoom(roomLink);
-      this.roomData = roomData;
-    } catch (error) {
-      this.error = error;
-    } finally {
-      this.isFetching = false;
-    }
-  });
 }
 
 const authStore = new AuthStore();

@@ -13,8 +13,37 @@ import Help from '../components/Help';
 import PlayRoom from '../components/PlayRoom';
 import Profile from '../components/Profile';
 
+import _ from 'lodash'
+import AsyncStorage from '@react-native-community/async-storage';
+
 class Layout extends Component {
+  state = {
+    currentUser: '',
+  };
+
+  componentDidMount() {
+    AsyncStorage.getItem('userId').then(value =>
+      this.setState({
+        currentUser: value,
+      }),
+    );
+  }
+
+  componentDidUpdate(prevProps) {
+    console.warn(this.props.authStore)
+    if (this.props.authStore.authData && this.props.authStore.authData.isLoggedOut) {
+      AsyncStorage.getItem('userId').then(value => {
+        if (!value) {
+          this.setState({
+            currentUser: '',
+          });
+        }
+      })
+    }
+  }
+
   render() {
+    const {authData} = this.props.authStore;
     const RoomCreationStack = createStackNavigator(
       {
         RoomCreation: {screen: RoomCreation},
@@ -57,7 +86,12 @@ class Layout extends Component {
     );
 
     const AppContainer = createAppContainer(MainNavigator);
-    return this.props.authStore.authData ? <AppContainer /> : <LoginPage />;
+    console.warn('cc', this.state.currentUser, authData.id);
+    return this.state.currentUser || authData.id ? (
+      <AppContainer />
+    ) : (
+      <LoginPage />
+    );
   }
 }
 
